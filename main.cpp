@@ -1,4 +1,5 @@
 #include <SDL.h>
+#include <SDL_image.h>
 #include <iostream>
 #include <string>
 
@@ -20,6 +21,9 @@ int SCREEN_HEIGHT = 480;
 //window to render
 SDL_Window* gWindow = NULL;
 
+//load individual images
+SDL_Surface* loadSurface( std::string path );
+
 //window's surface
 SDL_Surface* gScreenSurface = NULL;
 
@@ -32,6 +36,16 @@ SDL_Surface* gStretchedSurface = NULL;
 //current displayed image
 SDL_Surface* gCurrentSurface = NULL;
 
+void createStretchedImage( int x, int y, int w, int h, SDL_Surface* src, SDL_Surface* dst )
+{
+    SDL_Rect stretchRect;
+    stretchRect.x = x;
+    stretchRect.y = y;
+    stretchRect.w = w;
+    stretchRect.h = h;
+    SDL_BlitScaled( src, NULL, dst, &stretchRect );
+}
+
 //starts SDL and creates window
 bool init();
 
@@ -41,48 +55,31 @@ bool loadMedia();
 //frees media and shuts SDL
 void close();
 
-//load individual images
-SDL_Surface* loadSurface( std::string path );
-
-//create a stretched image
-void createStretchedImage( int x, int y, int w, int h, SDL_Surface* src, SDL_Surface* dst );
-
 SDL_Surface* loadSurface( std::string path )
 {
     //the final optimized image
     SDL_Surface* optimizedSurface = NULL;
 
     //load image at specified path
-    SDL_Surface* loadedSurface = SDL_LoadBMP( path.c_str() );
+    SDL_Surface* loadedSurface = IMG_Load( path.c_str() );
     if( loadedSurface == NULL )
     {
-        std::cout << "could not load image at " << path << "\nerror: " << SDL_GetError( ) << std::endl;
+        std::cout << "could not load image at " << path << "\nSDL_image error: " << IMG_GetError( ) << std::endl;
     }
     else
     {
         //convert image to screen format
-        optimizedSurface = SDL_ConvertSurface( loadedSurface, gScreenSurface->format, NULL );
+        optimizedSurface = SDL_ConvertSurface( loadedSurface, gScreenSurface->format, 0 );
         if( optimizedSurface == NULL )
         {
-            std::cout << "could not optimize image " << path.c_str() << "\nerror: " << SDL_GetError( ) << std::endl;
+            std::cout << "could not optimize image " << path << "\nerror: " << SDL_GetError( ) << std::endl;
         }
 
         //get rid of loaded surface
         SDL_FreeSurface( loadedSurface );
-
     }
 
     return optimizedSurface;
-}
-
-void createStretchedImage( int x, int y, int w, int h, SDL_Surface* src, SDL_Surface* dst )
-{
-    SDL_Rect stretchRect;
-    stretchRect.x = x;
-    stretchRect.y = y;
-    stretchRect.w = w;
-    stretchRect.h = h;
-    SDL_BlitScaled( src, NULL, dst, &stretchRect );
 }
 
 bool init()
@@ -108,8 +105,19 @@ bool init()
         }
         else
         {
-            //get window surface
-            gScreenSurface = SDL_GetWindowSurface( gWindow );
+            //initialize png loading
+            int imgFlags = IMG_INIT_PNG;
+            if( !( IMG_Init( imgFlags ) & imgFlags ) )
+            {
+                std::cout << "SDL_image could not initialize! SDL_image error: " << IMG_GetError() << std::endl;
+                succes = false;
+            }
+            else
+            {
+                //get window surface
+                gScreenSurface = SDL_GetWindowSurface( gWindow );
+
+            }
         }
     }
 
@@ -156,7 +164,7 @@ bool loadMedia()
         succes = false;
     }
 
-    gStretchedSurface = loadSurface( "stretch_image/stretchable_image.bmp" );
+    gStretchedSurface = loadSurface( "png_img/png.png" );
 
     return succes;
 }
@@ -270,5 +278,3 @@ int main( int argc, char* args[] )
 
     return 0;
 }
-
-   
